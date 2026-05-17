@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">NGamingCase</string>
+    <string name="posts_title">Posts</string>
+    <string name="edit_post">Edit Post</string>
+    <string name="title_hint">Title</string>
+    <string name="body_hint">Body</string>
+    <string name="save">Save</string>
+    <string name="loading">Loading…</string>
+    <string name="error_loading">Failed to load posts</string>
+    <string name="post_deleted">Post deleted</string>
+    <string name="post_updated">Post updated</string>
+    <string name="no_posts">No posts available</string>
+</resources>
