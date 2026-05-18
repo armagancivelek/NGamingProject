@@ -81,19 +81,14 @@ class ListFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.posts.collect { posts ->
-                        postAdapter.submitList(posts)
+                    viewModel.uiState.collect { state ->
+                        postAdapter.submitList(state.posts)
+                        binding.progressBar.isVisible = state.isLoading
                     }
                 }
                 launch {
-                    viewModel.isLoading.collect { isLoading ->
-                        binding.progressBar.isVisible = isLoading
-                    }
-                }
-                launch {
-                    viewModel.error.collect { error ->
-                        binding.tvError.isVisible = error != null
-                        binding.tvError.text = error
+                    viewModel.errorEvent.collect { message ->
+                        Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
                     }
                 }
             }

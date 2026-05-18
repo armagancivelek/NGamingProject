@@ -5,9 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.schwagersoft.ngamingcase.data.PostItem
 import com.schwagersoft.ngamingcase.domain.PostRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -16,14 +19,11 @@ class PostViewModel @Inject constructor(
     private val repository: PostRepository
 ) : ViewModel() {
 
-    private val _posts = MutableStateFlow<List<PostItem>>(emptyList())
-    val posts: StateFlow<List<PostItem>> = _posts.asStateFlow()
+    private val _uiState = MutableStateFlow(PostUiState())
+    val uiState: StateFlow<PostUiState> = _uiState.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+    private val _errorEvent = Channel<String>()
+    val errorEvent = _errorEvent.receiveAsFlow()
 
     init {
         fetchPosts()
@@ -31,30 +31,32 @@ class PostViewModel @Inject constructor(
 
     fun fetchPosts() {
         viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
+            _uiState.update { it.copy(isLoading = true) }
             try {
                 val result = repository.getPosts()
-                _posts.value = result
+                _uiState.update { it.copy(isLoading = false, posts = result) }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Unknown error"
-            } finally {
-                _isLoading.value = false
+                _uiState.update { it.copy(isLoading = false) }
+                _errorEvent.send(e.message ?: "Unknown error")
             }
         }
     }
 
     fun deletePost(id: Int) {
-        _posts.value = _posts.value.filter { it.id != id }
+        _uiState.update { state ->
+            state.copy(posts = state.posts.filter { it.id != id })
+        }
     }
 
     fun updatePost(id: Int, title: String, body: String) {
-        _posts.value = _posts.value.map { post ->
-            if (post.id == id) post.copy(title = title, body = body) else post
+        _uiState.update { state ->
+            state.copy(posts = state.posts.map { post ->
+                if (post.id == id) post.copy(title = title, body = body) else post
+            })
         }
     }
 
     fun getPostById(id: Int): PostItem? {
-        return _posts.value.find { it.id == id }
+        return _uiState.value.posts.find { it.id == id }
     }
 }
