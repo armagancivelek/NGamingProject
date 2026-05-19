@@ -71,9 +71,8 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
-    // Lifecycle (ViewModel + LiveData)
+    // Lifecycle (ViewModel)
     implementation(libs.lifecycle.viewmodel.ktx)
-    implementation(libs.lifecycle.livedata.ktx)
 
     // Navigation
     implementation(libs.navigation.fragment.ktx)
