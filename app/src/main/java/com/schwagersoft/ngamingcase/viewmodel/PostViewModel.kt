@@ -1,62 +1,50 @@
 package com.schwagersoft.ngamingcase.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.schwagersoft.ngamingcase.data.PostItem
 import com.schwagersoft.ngamingcase.domain.PostRepository
+import com.schwagersoft.ngamingcase.util.asUiMessage
+import com.schwagersoft.ngamingcase.util.onError
+import com.schwagersoft.ngamingcase.util.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class PostViewModel @Inject constructor(
     private val repository: PostRepository
-) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(PostUiState())
-    val uiState: StateFlow<PostUiState> = _uiState.asStateFlow()
-
-    private val _errorEvent = Channel<String>()
-    val errorEvent = _errorEvent.receiveAsFlow()
+) : BaseViewModel<PostUiState, PostIntent, PostEvent>(PostUiState()) {
 
     init {
-        fetchPosts()
+        onIntent(PostIntent.FetchPosts)
     }
 
-    fun fetchPosts() {
+    override fun onIntent(intent: PostIntent) {
+        when (intent) {
+            is PostIntent.FetchPosts -> fetchPosts()
+            is PostIntent.DeletePost -> deletePost(intent.id)
+            is PostIntent.UpdatePost -> updatePost(intent.id, intent.title, intent.body)
+        }
+    }
+
+    private fun fetchPosts() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                val result = repository.getPosts()
-                _uiState.update { it.copy(isLoading = false, posts = result) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false) }
-                _errorEvent.send(e.message ?: "Unknown error")
-            }
+            updateState { copy(isLoading = true) }
+            repository.getPosts()
+                .onSuccess { posts -> updateState { copy(posts = posts) } }
+                .onError { error -> sendEvent(PostEvent.ShowError(error.asUiMessage())) }
+            updateState { copy(isLoading = false) }
         }
     }
 
-    fun deletePost(id: Int) {
-        _uiState.update { state ->
-            state.copy(posts = state.posts.filter { it.id != id })
-        }
+    private fun deletePost(id: Int) {
+        updateState { copy(posts = posts.filter { it.id != id }) }
     }
 
-    fun updatePost(id: Int, title: String, body: String) {
-        _uiState.update { state ->
-            state.copy(posts = state.posts.map { post ->
+    private fun updatePost(id: Int, title: String, body: String) {
+        updateState {
+            copy(posts = posts.map { post ->
                 if (post.id == id) post.copy(title = title, body = body) else post
             })
         }
-    }
-
-    fun getPostById(id: Int): PostItem? {
-        return _uiState.value.posts.find { it.id == id }
     }
 }

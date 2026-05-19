@@ -13,6 +13,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.schwagersoft.ngamingcase.BuildConfig
 import com.schwagersoft.ngamingcase.R
 import com.schwagersoft.ngamingcase.databinding.FragmentDetailBinding
+import com.schwagersoft.ngamingcase.viewmodel.PostIntent
 import com.schwagersoft.ngamingcase.viewmodel.PostViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -44,7 +45,7 @@ class DetailFragment : Fragment() {
             findNavController().navigateUp()
         }
 
-        val post = viewModel.getPostById(postId)
+        val post = viewModel.state.value.posts.find { it.id == postId }
         post?.let {
             binding.etTitle.setText(it.title)
             binding.etBody.setText(it.body)
@@ -61,7 +62,7 @@ class DetailFragment : Fragment() {
             val newBody = binding.etBody.text.toString().trim()
 
             if (newTitle.isNotEmpty() && newBody.isNotEmpty()) {
-                viewModel.updatePost(postId, newTitle, newBody)
+                viewModel.onIntent(PostIntent.UpdatePost(postId, newTitle, newBody))
                 Snackbar.make(binding.root, R.string.post_updated, Snackbar.LENGTH_SHORT).show()
                 findNavController().navigateUp()
             }

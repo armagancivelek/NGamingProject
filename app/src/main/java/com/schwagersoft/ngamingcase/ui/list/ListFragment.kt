@@ -18,6 +18,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.schwagersoft.ngamingcase.R
 import com.schwagersoft.ngamingcase.databinding.FragmentListBinding
+import com.schwagersoft.ngamingcase.viewmodel.PostEvent
+import com.schwagersoft.ngamingcase.viewmodel.PostIntent
 import com.schwagersoft.ngamingcase.viewmodel.PostViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -70,7 +72,7 @@ class ListFragment : Fragment() {
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.bindingAdapterPosition
                 val post = postAdapter.currentList[position]
-                viewModel.deletePost(post.id)
+                viewModel.onIntent(PostIntent.DeletePost(post.id))
                 Snackbar.make(binding.root, R.string.post_deleted, Snackbar.LENGTH_SHORT).show()
             }
         }
@@ -81,14 +83,18 @@ class ListFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.uiState.collect { state ->
+                    viewModel.state.collect { state ->
                         postAdapter.submitList(state.posts)
                         binding.progressBar.isVisible = state.isLoading
                     }
                 }
                 launch {
-                    viewModel.errorEvent.collect { message ->
-                        Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
+                    viewModel.event.collect { event ->
+                        when (event) {
+                            is PostEvent.ShowError -> {
+                                Snackbar.make(binding.root, event.message, Snackbar.LENGTH_LONG).show()
+                            }
+                        }
                     }
                 }
             }
